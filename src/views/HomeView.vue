@@ -1,9 +1,13 @@
 <script setup>
-import TheWelcome from '../components/TheWelcome.vue'
+import HeaderSection from '../components/HeaderSection.vue';
+import CardsSection from '@/components/CardsSection.vue'
 </script>
 
 <template>
+  <header>
+    <HeaderSection/>
+  </header>
   <main>
-    <TheWelcome />
+    <CardsSection/>
   </main>
 </template>
