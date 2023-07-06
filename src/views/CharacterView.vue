@@ -72,7 +72,7 @@ onMounted(() => {
         </div>
         <div class="mt-5">
             <h3 class="text-2xl">Episodes:</h3>
-            <ul>
+            <ul >
                 <li
                 v-for="(episode, index) in character.episode" :key="index"
                 class="hover: cursor-pointer border p-2" 

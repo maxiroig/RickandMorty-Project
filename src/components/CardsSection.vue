@@ -12,6 +12,7 @@ const totalLocations = ref("")
 const totalEpisodes = ref("")
 const selectedGender = ref("")
 const selectedStatus = ref("")
+const selectedName = ref("")
 const charactersStatus = [
     "alive",
     "dead",
@@ -58,6 +59,11 @@ const filterCharactersBy = () => {
         axios
         .get(`https://rickandmortyapi.com/api/character/?gender=${selectedGender.value}&status=${selectedStatus.value}`)
         .then(response => charactersFiltereds.value = response.data.results)
+    }
+    if(selectedStatus.value === "") setDisplayCardsByDefault()
+    if(selectedName.value){
+        charactersFiltereds.value = characters.value.filter(character => character.name.toLowerCase().substring(0,selectedName.value.length) === selectedName.value.toLowerCase())
+        console.log("filter", charactersFiltereds.value);
     }
 }
 const resetFiltersButton = () => {
@@ -115,14 +121,15 @@ onMounted(() => {
                 <div class="mb-3 grid grid-cols-2">
                     <span class="mr-3 text-end p-2">Name</span>
                     <input 
+                    @keyup="filterCharactersBy"
+                    v-model="selectedName"
                     class="text-black max-w-xs h-10 rounded-md"
                     type="text">
                 </div>
                 <div class="mb-3 grid grid-cols-2">
                     <span class="mr-3 text-end p-2">Gender</span>
                     <select 
-                    id="gender"
-                    
+                    id="gender"  
                     v-model="selectedGender"
                     class="text-black max-w-xs h-10 rounded-md">
                         <option disabled value="selectedGender">Gender</option>
