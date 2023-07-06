@@ -1,73 +1,215 @@
 <script setup>
-import { onMounted, ref } from 'vue';
-
-
+import { onMounted, ref, watch } from 'vue';
+import { useRouter, useRoute } from 'vue-router'; 
 import axios from 'axios'
 
+const route = useRoute()
+const router = useRouter()
 const characters = ref([])
-const shortedCharacters = ref([])
-const gender = ref("")
+const charactersFiltereds = ref([])
+const totalCharacters = ref("")
+const totalLocations = ref("")
+const totalEpisodes = ref("")
+const selectedGender = ref("")
+const selectedStatus = ref("")
+const charactersStatus = [
+    "alive",
+    "dead",
+    "unknown",
+]
+const genders = [
+    'Male',
+    'Female',
+    "genderless",
+    "unknown"
+]
 
-const setResult = (response) => {
-    characters.value = response
-    shortedCharacters.value = characters.value.slice(0, 6)
-    console.log("characters", shortedCharacters.value);
+const setDataResult = () => {
+    getCharacters();
+    getLocations();
+    getEpisodes();
 }
-onMounted(() => {
+const setCharactersResult = (response) => {
+    characters.value = response.results
+    totalCharacters.value = response.info.count
+    setDisplayCardsByDefault();
+}
+const setDisplayCardsByDefault = () => {
+    charactersFiltereds.value = characters.value.slice(0, 5)
+    setUrlbyDefault();
+}
+const setUrlbyDefault = () => {
+    const parameters = route.query
+    if(parameters.gender) selectedGender.value = parameters.gender
+    if(parameters.status) selectedStatus.value = parameters.status
+}
+const filterCharactersBy = () => {
+    if(selectedGender.value){
+        axios
+        .get(`https://rickandmortyapi.com/api/character/?gender=${selectedGender.value}`)
+        .then(response => charactersFiltereds.value = response.data.results)
+    }
+    if(selectedStatus.value){
+        axios
+        .get(`https://rickandmortyapi.com/api/character/?status=${selectedStatus.value}`)
+        .then(response => charactersFiltereds.value = response.data.results)
+    }
+    if(selectedGender.value && selectedStatus.value){
+        axios
+        .get(`https://rickandmortyapi.com/api/character/?gender=${selectedGender.value}&status=${selectedStatus.value}`)
+        .then(response => charactersFiltereds.value = response.data.results)
+    }
+}
+const resetFiltersButton = () => {
+    selectedGender.value = null
+    selectedStatus.value = null
+    router.push("/")
+    setDisplayCardsByDefault();
+}
+const getCharacters = () => {
     axios
         .get('https://rickandmortyapi.com/api/character')
-        .then(response => setResult(response.data.results))
+        .then(response => setCharactersResult(response.data))
+}
+const getLocations = () => {
+    axios
+        .get('https://rickandmortyapi.com/api/location')
+        .then(response => totalLocations.value = response.data.info.count)
+}
+const getEpisodes = () => {
+    axios
+        .get('https://rickandmortyapi.com/api/episode')
+        .then(response => totalEpisodes.value = response.data.info.count)
+}
+const handleUrlParameters = () => {
+    if(selectedGender.value){
+        router.push({query: {gender: selectedGender.value}})
+    }
+    if(selectedStatus.value){
+        router.push({query: {gender: selectedGender.value}})
+    }
+    if(selectedGender.value && selectedStatus.value){
+        router.push({query: {gender: selectedGender.value, status: selectedStatus.value}})
+    }
+}
+
+watch(selectedGender, () => {
+    filterCharactersBy();
+    handleUrlParameters();
+})
+watch(selectedStatus, () => {
+    filterCharactersBy()
+    handleUrlParameters();
+})
+onMounted(() => {
+    setDataResult();
 })
 </script>
 <template>
     <div class="bg-gray-900 py-24 sm:py-32">
+        <div class="text-center text-5xl mb-12">
+            Filter By
+        </div>
         <div class="mx-auto max-w-7xl px-6 text-center lg:px-8">
-            <div>
-                <label for="gender">Select Gender</label>
-                <select
-                v-model="gender"
-                name="gender" id="gender">
-                    <option value="male">Male</option>
-                    <option value="female">Female</option>
-                </select>
+            <div class="grid">
+                <div class="mb-3 grid grid-cols-2">
+                    <span class="mr-3 text-end p-2">Name</span>
+                    <input 
+                    class="text-black max-w-xs h-10 rounded-md"
+                    type="text">
+                </div>
+                <div class="mb-3 grid grid-cols-2">
+                    <span class="mr-3 text-end p-2">Gender</span>
+                    <select 
+                    id="gender"
+                    
+                    v-model="selectedGender"
+                    class="text-black max-w-xs h-10 rounded-md">
+                        <option disabled value="selectedGender">Gender</option>
+                        <option v-for="(gender, index) in genders" :key="index" :value="gender">
+                            {{ gender }}
+                        </option>
+                    </select>
+                </div>
+                <div class="grid grid-cols-2">
+                    <label class="text-end mr-3 p-2" for="Count">
+                        Status 
+                    </label>
+                    <select 
+                    v-model="selectedStatus" 
+                    class="text-black max-w-xs h-10 rounded-md">
+                        <option v-for="(status, index) in charactersStatus" :key="index" :value="status">
+                            {{ status }}
+                        </option>
+                    </select>
+                </div>
             </div>
-            <input type="text" class="text-black">
-            <ul role="list"
-                class="mx-auto mt-20 grid max-w-2xl grid-cols-1 gap-6 sm:grid-cols-2 lg:mx-0 lg:max-w-none lg:grid-cols-3 lg:gap-8">
-                <li 
-                v-for="(character) in shortedCharacters" 
-                :key="character.name" 
-                class="rounded-2xl bg-gray-800 px-8 py-10">
-                        <img class="mx-auto h-48 w-48 rounded-full md:h-56 md:w-56" :src="character.image" :alt="character.name" />
-                        <h3 class="mt-6 text-base font-semibold leading-7 tracking-tight text-pink-800 hover:text-orange-500 hover:cursor-pointer">
+            <div>
+                <button 
+                @click="resetFiltersButton"
+                class="bg-pink-500 p-3 mt-5 rounded-md hover:bg-pink-700">
+                    Reset filters
+                </button>
+            </div>
+            <div>
+                <ul role="list"
+                    class="mx-auto mt-20 grid max-w-2xl grid-cols-1 gap-6 sm:grid-cols-2 lg:mx-0 lg:max-w-none lg:grid-cols-3 lg:gap-8">
+                    <li v-for="character in charactersFiltereds" :key="character.id"
+                        @click="router.push(`/character/${character.id}`)"
+                        class="rounded-2xl bg-gray-800 px-8 py-10">
+                        <img class="mx-auto h-48 w-48 rounded-full md:h-56 md:w-56" :src="character.image"
+                            :alt="character.name" />
+                        <h3
+                            class="mt-6 text-base font-semibold leading-7 tracking-tight text-pink-500 hover:text-orange-500 hover:cursor-pointer">
                             {{ character.name }}
                         </h3>
                         <p class="text-sm leading-6 text-white-400">
-                            <span :class="character.status === 'Alive' ? 'green-dot' : 'red-dot'"/>
+                            <span v-if="character.status === 'Alive' || character.status === 'Dead'" :class="character.status === 'Alive' ? 'green-dot' : 'red-dot'" />
+                            <span v-if="character.status === 'unknown'" class="yellow-dot" />
                             {{ character.species }} - {{ character.status }}
                         </p>
-                        <p class="text-sm leading-6 text-gray-400">Gender: <span class="text-white">{{ character.gender }}</span></p>
-                        <p class="text-sm leading-6 text-gray-400">Last know location: <span class="text-white">{{ character.location.name }}</span></p>    
-                </li>
-            </ul>
+                        <p class="text-sm leading-6 text-gray-400">Gender: <span class="text-white">{{ character.gender
+                        }}</span></p>
+                        <p class="text-sm leading-6 text-gray-400">Last know location: <span class="text-white">{{
+                            character.location.name }}</span></p>
+                    </li>
+                </ul>
+            </div>
+        </div>
+        <div class="text-center mt-4">
+            <span class="text-gray-500 mr-5">
+                CHARACTERS: <span class="text-white">{{ totalCharacters }}</span>
+            </span>
+            <span class="text-gray-500 mr-5">
+                LOCATIONS: <span class="text-white">{{ totalLocations }}</span>
+            </span>
+            <span class="text-gray-500 ">
+                EPISODES: <span class="text-white">{{ totalEpisodes }}</span> </span>
         </div>
     </div>
 </template>
 
 <style>
-
 .green-dot {
-        height: 8px;
-        width: 8px;
-        background-color: green;
-        border-radius: 50%;
-        display: inline-block;
+    height: 8px;
+    width: 8px;
+    background-color: green;
+    border-radius: 50%;
+    display: inline-block;
 }
+
 .red-dot {
-        height: 8px;
-        width: 8px;
-        background-color: red;
-        border-radius: 50%;
-        display: inline-block;
+    height: 8px;
+    width: 8px;
+    background-color: red;
+    border-radius: 50%;
+    display: inline-block;
+}
+.yellow-dot {
+    height: 8px;
+    width: 8px;
+    background-color: yellow;
+    border-radius: 50%;
+    display: inline-block;
 }
 </style>
